@@ -1,69 +1,84 @@
 import streamlit as st
 
-st.set_page_config(page_title="AA Çapraz Bulmaca", layout="centered")
+st.set_page_config(page_title="AA Kare Bulmaca", layout="centered")
 
-# CSS ile kutucukları güzelleştirelim
+# CSS ile gerçek bulmaca görünümü (Siyah kareler ve harf kutuları)
 st.markdown("""
     <style>
-    .letter-input {
-        width: 40px !important;
-        height: 40px !important;
+    .stTextInput input {
+        width: 45px !important;
+        height: 45px !important;
+        padding: 0px !important;
         text-align: center !important;
         font-weight: bold !important;
         font-size: 20px !important;
-        text-transform: uppercase !important;
+        background-color: white;
+        border: 2px solid #333 !important;
     }
-    .hint-text {
-        color: #555;
-        font-style: italic;
+    .black-cell {
+        width: 45px;
+        height: 45px;
+        background-color: #333;
+        border: 2px solid #333;
+        border-radius: 4px;
     }
     </style>
 """, unsafe_allow_html=True)
 
-st.title("🧩 Amino Asit Çapraz Bulmaca")
-st.write("Her kutucuğa bir harf gelecek şekilde kelimeleri tamamlayın!")
+st.title("🧪 Esansiyel AA Kare Bulmaca")
+st.write("9 Esansiyel Amino Asidi bulmacaya yerleştirin! (Büyük harf kullanın)")
 
-def crossword_row(label, answer, hint):
-    st.subheader(f"❓ {label}")
-    st.caption(hint)
-    
-    # Harf sayısı kadar sütun oluştur
-    cols = st.columns(len(answer) + 1)
-    user_answer = ""
-    
-    for i, letter in enumerate(answer):
-        with cols[i]:
-            # Her kutucuk için benzersiz key
-            char = st.text_input("", key=f"input_{label}_{i}", max_chars=1).upper()
-            user_answer += char
-            
-    if user_answer == answer:
-        st.success(f"✅ Doğru: {answer}")
-        return True
-    elif len(user_answer) == len(answer):
-        st.error("❌ Hatalı harf var!")
-    return False
-
-# Bulmaca Soruları
-score = 0
-questions = [
-    ("SORU 1", "VALIN", "Dallı zincirli, en basit esansiyel amino asitlerden biri."),
-    ("SORU 2", "LIZIN", "Bazik yan zincirli, sadece ketojenik olan amino asit."),
-    ("SORU 3", "METIYONIN", "Başlangıç kodonu olan, sülfür içeren esansiyel AA."),
-    ("SORU 4", "HISTIDIN", "Yarı esansiyel, çocukluk döneminde dışarıdan alınması zorunlu AA.")
+# Bulmaca Matrisi (9 satır x 10 sütun örneği)
+# 'X' siyah kutuları, harfler ise doğru cevapları temsil eder.
+grid_data = [
+    ['L', 'İ', 'Z', 'İ', 'N', 'X', 'X', 'X', 'X'],
+    ['Ö', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X'],
+    ['S', 'X', 'V', 'A', 'L', 'İ', 'N', 'X', 'X'],
+    ['İ', 'X', 'A', 'X', 'X', 'X', 'X', 'X', 'X'],
+    ['N', 'X', 'L', 'İ', 'N', 'X', 'M', 'E', 'T'], # Kısaltılmış örnek dizilim
+    ['X', 'X', 'İ', 'X', 'X', 'X', 'E', 'X', 'X'],
+    ['T', 'R', 'E', 'O', 'N', 'İ', 'N', 'X', 'X'],
+    ['X', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X']
 ]
 
-for label, ans, hint in questions:
-    if crossword_row(label, ans, hint):
-        score += 1
+# Sorular ve İpuçları
+st.sidebar.header("📝 İpuçları")
+st.sidebar.markdown("""
+1. **Yatay:** Bazik, sadece ketojenik AA.
+2. **Dikey:** Sadece ketojenik, dallı zincirli.
+3. **Yatay:** En küçük dallı zincirli AA.
+4. **Yatay:** OH grubu içeren esansiyel AA.
+5. **Dikey:** Sülfür içeren başlangıç AA.
+""")
 
-# İlerleme Durumu
+# Bulmacayı oluştur
+correct_count = 0
+total_letters = 0
+
+for r, row in enumerate(grid_data):
+    cols = st.columns(len(row))
+    for c, cell in enumerate(row):
+        with cols[c]:
+            if cell == 'X':
+                # Siyah kutu
+                st.markdown('<div class="black-cell"></div>', unsafe_allow_html=True)
+            else:
+                total_letters += 1
+                user_char = st.text_input("", key=f"cell_{r}_{c}", max_chars=1).upper()
+                if user_char == cell:
+                    correct_count += 1
+
+# Durum çubuğu ve başarı mesajı
 st.divider()
-if score == len(questions):
-    st.balloons()
-    st.success("Tüm bulmacayı çözdünüz! 🏆")
-else:
-    st.info(f"Kalan kelime sayısı: {len(questions) - score}")
+if total_letters > 0:
+    progress = correct_count / total_letters
+    st.progress(progress)
+    
+    if correct_count == total_letters:
+        st.balloons()
+        st.success("Tebrikler! Amino asit kalesini fethettiniz! 🏆")
+    else:
+        st.info(f"Doğru harf sayısı: {correct_count} / {total_letters}")
 
-with st.expander("İpucu Kelimeler"):
-    st.write("VALIN, LIZIN, METIYONIN, HISTIDIN")
+with st.expander("Kullanılacak Amino Asitler Listesi"):
+    st.write("FENİALANİN, VALİN, TREONİN, TRİPTOFAN, İZOLÖSİN, LÖSİN, LİZİN, METİYONİN, HİSTİDİN")
