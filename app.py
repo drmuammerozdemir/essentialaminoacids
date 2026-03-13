@@ -108,13 +108,13 @@ for r in range(GRID_SIZE):
             btn_type, label = "secondary", char # Normal Harf
 
         if cols[c].button(label, key=f"{r}_{c}", type=btn_type):
-            if not is_found:
-                if coord in st.session_state.selected:
-                    st.session_state.selected.remove(coord)
-                else:
-                    st.session_state.selected.append(coord)
-                check_selection()
-                st.rerun()
+            # Bulunmuş (yeşil) olsa bile seçilmesine izin veriyoruz
+            if coord in st.session_state.selected:
+                st.session_state.selected.remove(coord)
+            else:
+                st.session_state.selected.append(coord)
+            check_selection()
+            st.rerun()
 
 if st.button("Seçimi Temizle 🗑️", use_container_width=True):
     st.session_state.selected = []
