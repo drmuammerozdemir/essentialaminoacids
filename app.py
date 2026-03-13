@@ -86,8 +86,7 @@ name = st.text_input("Yarışmacı Adı:", key="user_name")
 if not name:
     st.info("Lütfen adınızı yazarak yarışmaya başlayın.")
     st.stop()
-    st.markdown('<div class="footer">Hazırlayan: Dr. Öğr. Üyesi Muammer Özdemir</div>', unsafe_allow_html=True)
-    st.stop()
+    
 
 st.write(f"Bulunan Kelimeler: **{len(st.session_state.found_words)} / 9**")
 
