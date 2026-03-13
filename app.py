@@ -80,7 +80,7 @@ def check_selection():
     return False
 
 # --- EKRAN ---
-st.title("🧩 Amino Asit Avı, Dr. Muammer ÖZDEMİR tarafından hazırlanmıştır")
+st.title("🧩 Esansiyel Amino Asit Avı")
 name = st.text_input("Yarışmacı Adı:", key="user_name")
 
 if not name:
