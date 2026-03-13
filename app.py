@@ -1,108 +1,128 @@
 import streamlit as st
-import pandas as pd
 import time
+import random
+import string
 
 st.set_page_config(page_title="AA Kelime Avı", layout="centered")
 
-# CSS: Hücrelerin kare olması ve mobil dokunmatiğe uygunluğu için
+# --- CSS: TELEFON İÇİN ÖZEL TASARIM ---
 st.markdown("""
     <style>
-    div.stButton > button {
-        width: 45px !important;
-        height: 45px !important;
-        padding: 0px !important;
-        margin: 2px !important;
-        font-size: 16px !important;
-        font-weight: bold !important;
+    .grid-container {
+        display: grid;
+        grid-template-columns: repeat(10, 1fr); /* 10 sütunlu ızgara */
+        gap: 4px;
+        margin-bottom: 20px;
+        justify-content: center;
     }
-    .found { background-color: #28a745 !important; color: white !important; }
-    .selected { background-color: #ffc107 !important; }
+    .stButton > button {
+        width: 100% !important;
+        aspect-ratio: 1 / 1 !important;
+        padding: 0px !important;
+        font-size: 14px !important;
+        font-weight: bold !important;
+        border-radius: 4px !important;
+    }
+    /* Basılan harf gri, bulunan kelime yeşil (Streamlit button state ile yönetilir) */
     </style>
 """, unsafe_allow_html=True)
 
-# 1. VERİ VE MATRİS HAZIRLIĞI
+# --- OYUN VERİLERİ ---
 target_words = ["FENILALANIN", "VALIN", "TREONIN", "TRIPTOFAN", "IZOLOSIN", "LOSIN", "LIZIN", "METIYONIN", "HISTIDIN"]
 
-# Örnek 12x12 matris (Basitleştirilmiş, siz bunu geliştirebilirsiniz)
-grid = [
-    list("FENILALANINX"),
-    list("VALINXXXXXXX"),
-    list("TREONINXXXXX"),
-    list("TRIPTOFANXXX"),
-    list("IZOLOSINXXXX"),
-    list("LOSINXXXXXXX"),
-    list("LIZINXXXXXXX"),
-    list("METIYONINXXX"),
-    list("HISTIDINXXXX"),
-    list("XXXXXXXXXXXX"),
-    list("XXXXXXXXXXXX"),
-    list("XXXXXXXXXXXX")
-]
+# Matrisi hazırlama (10x12)
+if 'grid' not in st.session_state:
+    # Boş matris oluştur
+    base_grid = [["" for _ in range(10)] for _ in range(12)]
+    
+    # Kelimeleri yerleştir (Basit dikey/yatay yerleştirme)
+    for i, word in enumerate(target_words):
+        for char_idx, char in enumerate(word):
+            if i < 12 and char_idx < 10:
+                base_grid[i][char_idx] = char
+    
+    # Boş kalan yerleri rastgele harflerle doldur
+    for r in range(12):
+        for c in range(10):
+            if base_grid[r][c] == "":
+                base_grid[r][c] = random.choice(string.ascii_uppercase).replace('Q','A').replace('W','S')
+    
+    st.session_state.grid = base_grid
 
-# 2. SESSION STATE BAŞLATMA
-if 'selected_cells' not in st.session_state:
-    st.session_state.selected_cells = []
+# --- SESSION STATE ---
+if 'selected_coords' not in st.session_state:
+    st.session_state.selected_coords = []
+if 'found_coords' not in st.session_state:
+    st.session_state.found_coords = []
 if 'found_words' not in st.session_state:
     st.session_state.found_words = []
 if 'start_time' not in st.session_state:
     st.session_state.start_time = time.time()
 
-st.title("🧪 Amino Asit Kelime Avı")
+# --- BAŞLIK VE GİRİŞ ---
+st.title("🏆 AA Hız Yarışması")
 user_name = st.text_input("Yarışmacı Adı:", placeholder="Adınızı yazın...")
 
 if not user_name:
-    st.warning("Lütfen yarışmaya başlamak için adınızı girin.")
+    st.info("👆 Lütfen önce adınızı yazın.")
     st.stop()
 
-# 3. OYUN MANTIĞI
-st.write(f"Bulunan Kelimeler: {len(st.session_state.found_words)} / {len(target_words)}")
-
-def check_selection():
-    # Seçili harfleri birleştir
-    current_string = "".join([grid[r][c] for r, c in st.session_state.selected_cells])
-    for word in target_words:
-        if word == current_string and word not in st.session_state.found_words:
-            st.session_state.found_words.append(word)
-            st.session_state.selected_cells = [] # Seçimi sıfırla
-            return True
+# --- OYUN MANTIĞI ---
+def check_word():
+    # Seçilen koordinatlardaki harfleri birleştir
+    current_word = "".join([st.session_state.grid[r][c] for r, c in st.session_state.selected_coords])
+    if current_word in target_words and current_word not in st.session_state.found_words:
+        st.session_state.found_words.append(current_word)
+        st.session_state.found_coords.extend(st.session_state.selected_coords)
+        st.session_state.selected_coords = []
+        return True
     return False
 
-# 4. BULMACA EKRANI
-for r in range(len(grid)):
-    cols = st.columns(len(grid[r]))
-    for c in range(len(grid[r])):
-        char = grid[r][c]
+# --- BULMACA EKRANI (HTML & Streamlit Karma) ---
+st.write(f"Bulunan: {len(st.session_state.found_words)} / 9")
+
+# Izgarayı oluştur
+for r in range(12):
+    cols = st.columns(10) # Telefondaki "alt alta binme" sorununu önlemek için columns sayısını sabitliyoruz
+    for c in range(10):
+        char = st.session_state.grid[r][c]
+        coord = (r, c)
         
-        # Hücrenin durumu (Seçili mi? Bulundu mu?)
-        is_found = any(word == "".join([grid[r_f][c_f] for r_f, c_f in st.session_state.selected_cells]) for word in st.session_state.found_words) # Bu basitleştirilmiş bir kontroldür
-        
-        # Kelime içindeki harfin koordinatı daha önce bulunan bir kelimeye ait mi?
-        # (Bu kısım biraz daha karmaşık bir 'found_coordinates' listesi gerektirir, 
-        # şimdilik temel mantığı kuruyoruz)
-        
-        button_key = f"btn_{r}_{c}"
-        if cols[c].button(char, key=button_key):
-            if (r, c) not in st.session_state.selected_cells:
-                st.session_state.selected_cells.append((r, c))
-                check_selection()
+        # Renk Belirleme
+        if coord in st.session_state.found_coords:
+            btn_type = "primary" # Yeşilimsi/Mavi (Tema ayarına göre)
+            label = f"✅" # Veya sadece char
+        elif coord in st.session_state.selected_coords:
+            label = char
+            btn_type = "secondary" # Gri görünüm için standart buton
+        else:
+            label = char
+            btn_type = "secondary"
+
+        if cols[c].button(label, key=f"btn_{r}_{c}", use_container_width=True, type="primary" if coord in st.session_state.found_coords else "secondary"):
+            if coord not in st.session_state.found_coords:
+                if coord in st.session_state.selected_coords:
+                    st.session_state.selected_coords.remove(coord)
+                else:
+                    st.session_state.selected_coords.append(coord)
+                check_word()
                 st.rerun()
 
-if st.button("Seçimi Temizle"):
+if st.button("Seçimi Sıfırla 🧹", use_container_width=True):
     st.session_state.selected_cells = []
+    st.session_state.selected_coords = []
     st.rerun()
 
-# 5. BİTİŞ VE LİDERLİK
-if len(st.session_state.found_words) == len(target_words):
-    end_time = time.time() - st.session_state.start_time
+# --- BİTİŞ ---
+if len(st.session_state.found_words) == 9:
+    total_time = round(time.time() - st.session_state.start_time, 2)
     st.balloons()
-    st.success(f"Tebrikler {user_name}! Süren: {end_time:.2f} saniye")
-    
-    # Skor Kaydı (Gerçek bir DB için st.connection kullanılmalı)
-    st.write("🏆 Skorun kaydedildi! (Liderlik tablosu için öğretmeninize ekran görüntüsü atın)")
+    st.success(f"MÜKEMMEL! {user_name}, süren: {total_time} saniye.")
+    st.divider()
+    st.subheader("Öğretmene bu ekranı göster!")
+    st.write(f"Kod: {user_name.upper()}-{int(total_time*100)}")
 
-st.sidebar.header("Bulunacak Kelimeler")
+st.sidebar.markdown("### Bulunacak Liste")
 for w in target_words:
-    if w in st.session_state.found_words:
-        st.sidebar.write(f"✅ ~~{w}~~")
-    else:
-        st.sidebar.write(f"⬜ {w}")
+    status = "✅" if w in st.session_state.found_words else "⬜"
+    st.sidebar.write(f"{status} {w}")
