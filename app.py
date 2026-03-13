@@ -6,7 +6,7 @@ import string
 st.set_page_config(page_title="AA Yarışma Paneli", layout="centered")
 
 # --- AYARLAR ---
-ADMIN_PASSWORD = "hocam123" 
+ADMIN_PASSWORD = "drmmr123" 
 random.seed(2024) # Herkes için aynı bulmaca
 
 if 'leaderboard' not in st.session_state:
