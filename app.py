@@ -60,7 +60,7 @@ if 'is_finished' not in st.session_state: st.session_state.is_finished = False
 
 # --- YÖNETİCİ GİRİŞİ ---
 with st.sidebar:
-    st.title("🔐 Yönetici")
+    st.title("🔐 Dr. Muammer ÖZDEMİR tarafından hazırlanmıştır")
     admin_input = st.text_input("Şifre:", type="password")
     if admin_input == ADMIN_PASSWORD:
         st.write("### 🏆 Bitirenler")
