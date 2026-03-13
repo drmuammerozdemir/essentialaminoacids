@@ -1,61 +1,69 @@
 import streamlit as st
 
-# Sayfa Ayarları
-st.set_page_config(page_title="AA Bulmaca", layout="centered")
+st.set_page_config(page_title="AA Çapraz Bulmaca", layout="centered")
 
-# Esansiyel Amino Asit Veri Seti
-essential_aas = {
-    "FENİLALANİN": "Tirozin öncülüdür, aromatik bir halkaya sahiptir.",
-    "VALİN": "Dallı zincirli bir amino asittir (BCAA).",
-    "TİREONİN": "Yapısında hidroksil (-OH) grubu bulunduran esansiyel AA.",
-    "TRİPTOFAN": "Serotonin ve Melatonin öncülüdür, en büyük yan zincire sahiptir.",
-    "İZOLÖSİN": "Hem ketojenik hem glikojenik olan dallı zincirli AA.",
-    "LÖSİN": "Sadece ketojenik olan dallı zincirli AA.",
-    "LİZİN": "Bazik karakterli, sadece ketojenik olan esansiyel AA.",
-    "METİYONİN": "Sülfür (kükürt) içeren, başlangıç kodonu (AUG) amino asidi.",
-    "HİSTİDİN": "Yarı esansiyel kabul edilir, çocuklarda büyüme için kritiktir."
-}
+# CSS ile kutucukları güzelleştirelim
+st.markdown("""
+    <style>
+    .letter-input {
+        width: 40px !important;
+        height: 40px !important;
+        text-align: center !important;
+        font-weight: bold !important;
+        font-size: 20px !important;
+        text-transform: uppercase !important;
+    }
+    .hint-text {
+        color: #555;
+        font-style: italic;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
-st.title("🧩 Amino Asit Çengel Bulmaca")
-st.write("Aşağıdaki ipuçlarını kullanarak esansiyel amino asitleri bulun. Doğru yazarsanız bilgi kartı açılacaktır!")
+st.title("🧩 Amino Asit Çapraz Bulmaca")
+st.write("Her kutucuğa bir harf gelecek şekilde kelimeleri tamamlayın!")
 
-# Skor takibi için session state
-if 'found_count' not in st.session_state:
-    st.session_state.found_count = 0
-
-# Bulmaca Alanı
-found_list = []
-
-st.divider()
-
-cols = st.columns(2) # Görseli güzelleştirmek için iki sütun
-
-for i, (answer, hint) in enumerate(essential_aas.items()):
-    # Her 2 soruda bir sütun değiştir
-    col = cols[0] if i % 2 == 0 else cols[1]
+def crossword_row(label, answer, hint):
+    st.subheader(f"❓ {label}")
+    st.caption(hint)
     
-    with col:
-        user_input = st.text_input(f"İpucu: {hint[:40]}...", key=f"aa_{i}", placeholder="Hangi AA?")
-        
-        # Büyük harf ve Türkçe karakter toleransı için düzenleme
-        if user_input.strip().upper().replace('İ', 'İ').replace('I', 'I') == answer:
-            st.success(f"✅ Doğru: **{answer}**")
-            st.caption(f"💡 *Bilgi: {hint}*")
-            found_list.append(answer)
-        elif user_input:
-            st.error("❌ Henüz doğru değil...")
+    # Harf sayısı kadar sütun oluştur
+    cols = st.columns(len(answer) + 1)
+    user_answer = ""
+    
+    for i, letter in enumerate(answer):
+        with cols[i]:
+            # Her kutucuk için benzersiz key
+            char = st.text_input("", key=f"input_{label}_{i}", max_chars=1).upper()
+            user_answer += char
+            
+    if user_answer == answer:
+        st.success(f"✅ Doğru: {answer}")
+        return True
+    elif len(user_answer) == len(answer):
+        st.error("❌ Hatalı harf var!")
+    return False
 
-# İlerleme Çubuğu
+# Bulmaca Soruları
+score = 0
+questions = [
+    ("SORU 1", "VALIN", "Dallı zincirli, en basit esansiyel amino asitlerden biri."),
+    ("SORU 2", "LIZIN", "Bazik yan zincirli, sadece ketojenik olan amino asit."),
+    ("SORU 3", "METIYONIN", "Başlangıç kodonu olan, sülfür içeren esansiyel AA."),
+    ("SORU 4", "HISTIDIN", "Yarı esansiyel, çocukluk döneminde dışarıdan alınması zorunlu AA.")
+]
+
+for label, ans, hint in questions:
+    if crossword_row(label, ans, hint):
+        score += 1
+
+# İlerleme Durumu
 st.divider()
-progress = len(found_list) / len(essential_aas)
-st.subheader(f"Tamamlanma Oranı: %{int(progress*100)}")
-st.progress(progress)
-
-if len(found_list) == len(essential_aas):
+if score == len(questions):
     st.balloons()
-    st.success("Tebrikler! Tüm esansiyel amino asitleri başarıyla buldunuz! 🏆")
+    st.success("Tüm bulmacayı çözdünüz! 🏆")
+else:
+    st.info(f"Kalan kelime sayısı: {len(questions) - score}")
 
-# Alt Bilgi
-with st.expander("Yardım / Listeyi Gör"):
-    st.write("Aradığımız Amino Asitler: PVT TIM HALL (Esansiyel AA kısaltması)")
-    st.write(", ".join(essential_aas.keys()))
+with st.expander("İpucu Kelimeler"):
+    st.write("VALIN, LIZIN, METIYONIN, HISTIDIN")
