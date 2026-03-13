@@ -1,58 +1,61 @@
 import streamlit as st
-import time
-import pandas as pd
 
 # Sayfa Ayarları
-st.set_page_config(page_title="AA Yarışması", layout="centered")
+st.set_page_config(page_title="AA Bulmaca", layout="centered")
 
-# Sabit Veriler
-aa_data = {
-    "FENILALANIN": "Hem glikojenik hem ketojenik, tirozin öncülü olan esansiyel AA.",
-    "TREONIN": "Hem glikojenik hem ketojenik, OH grubu içeren esansiyel AA.",
-    "TRIPTOFAN": "Hem glikojenik hem ketojenik, serotonin sentezinde kullanılan AA.",
-    "IZOLOSIN": "Hem glikojenik hem ketojenik, dallı zincirli esansiyel AA."
+# Esansiyel Amino Asit Veri Seti
+essential_aas = {
+    "FENİLALANİN": "Tirozin öncülüdür, aromatik bir halkaya sahiptir.",
+    "VALİN": "Dallı zincirli bir amino asittir (BCAA).",
+    "TİREONİN": "Yapısında hidroksil (-OH) grubu bulunduran esansiyel AA.",
+    "TRİPTOFAN": "Serotonin ve Melatonin öncülüdür, en büyük yan zincire sahiptir.",
+    "İZOLÖSİN": "Hem ketojenik hem glikojenik olan dallı zincirli AA.",
+    "LÖSİN": "Sadece ketojenik olan dallı zincirli AA.",
+    "LİZİN": "Bazik karakterli, sadece ketojenik olan esansiyel AA.",
+    "METİYONİN": "Sülfür (kükürt) içeren, başlangıç kodonu (AUG) amino asidi.",
+    "HİSTİDİN": "Yarı esansiyel kabul edilir, çocuklarda büyüme için kritiktir."
 }
 
-# Session State Hazırlığı
-if 'start_time' not in st.session_state:
-    st.session_state.start_time = None
-if 'finished' not in st.session_state:
-    st.session_state.finished = False
+st.title("🧩 Amino Asit Çengel Bulmaca")
+st.write("Aşağıdaki ipuçlarını kullanarak esansiyel amino asitleri bulun. Doğru yazarsanız bilgi kartı açılacaktır!")
 
-st.title("🏆 Amino Asit Hız Yarışması")
+# Skor takibi için session state
+if 'found_count' not in st.session_state:
+    st.session_state.found_count = 0
 
-# 1. Giriş Ekranı
-user_name = st.text_input("Yarışmacı Adı:", placeholder="Adınızı yazın...")
+# Bulmaca Alanı
+found_list = []
 
-if user_name:
-    if st.button("Yarışmayı Başlat"):
-        st.session_state.start_time = time.time()
-        st.session_state.finished = False
-        st.rerun()
-
-# 2. Yarışma Alanı
-if st.session_state.start_time and not st.session_state.finished:
-    current_time = time.time() - st.session_state.start_time
-    st.write(f"⏱️ Geçen Süre: *{current_time:.2f}* saniye")
-    
-    selected = st.radio("Soru: Hangisi hem glikojenik hem ketojeniktir?", list(aa_data.keys()))
-    
-    if st.button("Cevabı Onayla"):
-        # Burada tüm AA'lar doğru kategoride olduğu için testi bitiriyoruz
-        st.session_state.finished = True
-        final_time = time.time() - st.session_state.start_time
-        st.success(f"Tebrikler {user_name}! Yarışmayı {final_time:.2f} saniyede tamamladın.")
-        
-        # Skor Kaydı (Simülasyon - Gerçek tablo için DB bağlantısı gerekir)
-        st.session_state.last_score = {"İsim": user_name, "Süre (sn)": round(final_time, 2)}
-
-# 3. Liderlik Tablosu (Örnek)
 st.divider()
-st.subheader("Leaderboard (Top 5)")
-# Not: Bu tablo her sayfa yenilendiğinde sıfırlanır. 
-# Kalıcı olması için Streamlit "Secrets" üzerinden bir DB bağlamalıyız.
-sample_data = pd.DataFrame([
-    {"İsim": "Ahmet", "Süre (sn)": 12.4},
-    {"İsim": "Ayşe", "Süre (sn)": 15.1}
-])
-st.table(sample_data)
+
+cols = st.columns(2) # Görseli güzelleştirmek için iki sütun
+
+for i, (answer, hint) in enumerate(essential_aas.items()):
+    # Her 2 soruda bir sütun değiştir
+    col = cols[0] if i % 2 == 0 else cols[1]
+    
+    with col:
+        user_input = st.text_input(f"İpucu: {hint[:40]}...", key=f"aa_{i}", placeholder="Hangi AA?")
+        
+        # Büyük harf ve Türkçe karakter toleransı için düzenleme
+        if user_input.strip().upper().replace('İ', 'İ').replace('I', 'I') == answer:
+            st.success(f"✅ Doğru: **{answer}**")
+            st.caption(f"💡 *Bilgi: {hint}*")
+            found_list.append(answer)
+        elif user_input:
+            st.error("❌ Henüz doğru değil...")
+
+# İlerleme Çubuğu
+st.divider()
+progress = len(found_list) / len(essential_aas)
+st.subheader(f"Tamamlanma Oranı: %{int(progress*100)}")
+st.progress(progress)
+
+if len(found_list) == len(essential_aas):
+    st.balloons()
+    st.success("Tebrikler! Tüm esansiyel amino asitleri başarıyla buldunuz! 🏆")
+
+# Alt Bilgi
+with st.expander("Yardım / Listeyi Gör"):
+    st.write("Aradığımız Amino Asitler: PVT TIM HALL (Esansiyel AA kısaltması)")
+    st.write(", ".join(essential_aas.keys()))
