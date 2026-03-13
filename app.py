@@ -5,124 +5,123 @@ import string
 
 st.set_page_config(page_title="AA Kelime Avı", layout="centered")
 
-# --- CSS: TELEFON İÇİN ÖZEL TASARIM ---
+# --- CSS: MODERN MOBİL TASARIM ---
 st.markdown("""
     <style>
-    .grid-container {
-        display: grid;
-        grid-template-columns: repeat(10, 1fr); /* 10 sütunlu ızgara */
-        gap: 4px;
-        margin-bottom: 20px;
-        justify-content: center;
-    }
     .stButton > button {
         width: 100% !important;
         aspect-ratio: 1 / 1 !important;
         padding: 0px !important;
-        font-size: 14px !important;
+        font-size: 12px !important;
         font-weight: bold !important;
         border-radius: 4px !important;
+        border: 1px solid #ddd !important;
     }
-    /* Basılan harf gri, bulunan kelime yeşil (Streamlit button state ile yönetilir) */
+    /* Seçili (Gri) Buton */
+    button[kind="secondary"]:active, button[kind="secondary"]:focus {
+        background-color: #d3d3d3 !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
-# --- OYUN VERİLERİ ---
-target_words = ["FENILALANIN", "VALIN", "TREONIN", "TRIPTOFAN", "IZOLOSIN", "LOSIN", "LIZIN", "METIYONIN", "HISTIDIN"]
+# --- BULMACA HAZIRLIĞI ---
+words = ["FENILALANIN", "VALIN", "TREONIN", "TRIPTOFAN", "IZOLOSIN", "LOSIN", "LIZIN", "METIYONIN", "HISTIDIN"]
+GRID_SIZE = 14
 
-# Matrisi hazırlama (10x12)
 if 'grid' not in st.session_state:
-    # Boş matris oluştur
-    base_grid = [["" for _ in range(10)] for _ in range(12)]
+    grid = [["" for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
     
-    # Kelimeleri yerleştir (Basit dikey/yatay yerleştirme)
-    for i, word in enumerate(target_words):
-        for char_idx, char in enumerate(word):
-            if i < 12 and char_idx < 10:
-                base_grid[i][char_idx] = char
-    
-    # Boş kalan yerleri rastgele harflerle doldur
-    for r in range(12):
-        for c in range(10):
-            if base_grid[r][c] == "":
-                base_grid[r][c] = random.choice(string.ascii_uppercase).replace('Q','A').replace('W','S')
-    
-    st.session_state.grid = base_grid
+    def place_word(word):
+        placed = False
+        while not placed:
+            direction = random.choice(['H', 'V']) # H: Yatay, V: Dikey
+            if direction == 'H':
+                row = random.randint(0, GRID_SIZE - 1)
+                col = random.randint(0, GRID_SIZE - len(word))
+                if all(grid[row][col+i] == "" or grid[row][col+i] == word[i] for i in range(len(word))):
+                    for i in range(len(word)): grid[row][col+i] = word[i]
+                    placed = True
+            else:
+                row = random.randint(0, GRID_SIZE - len(word))
+                col = random.randint(0, GRID_SIZE - 1)
+                if all(grid[row+i][col] == "" or grid[row+i][col] == word[i] for i in range(len(word))):
+                    for i in range(len(word)): grid[row+i][col] = word[i]
+                    placed = True
+
+    for w in words: place_word(w)
+    # Boşlukları doldur
+    for r in range(GRID_SIZE):
+        for c in range(GRID_SIZE):
+            if grid[r][c] == "": grid[r][c] = random.choice(string.ascii_uppercase)
+    st.session_state.grid = grid
 
 # --- SESSION STATE ---
-if 'selected_coords' not in st.session_state:
-    st.session_state.selected_coords = []
-if 'found_coords' not in st.session_state:
-    st.session_state.found_coords = []
-if 'found_words' not in st.session_state:
-    st.session_state.found_words = []
-if 'start_time' not in st.session_state:
-    st.session_state.start_time = time.time()
+if 'selected' not in st.session_state: st.session_state.selected = []
+if 'found_coords' not in st.session_state: st.session_state.found_coords = set()
+if 'found_words' not in st.session_state: st.session_state.found_words = []
+if 'start_time' not in st.session_state: st.session_state.start_time = time.time()
 
-# --- BAŞLIK VE GİRİŞ ---
-st.title("🏆 AA Hız Yarışması")
-user_name = st.text_input("Yarışmacı Adı:", placeholder="Adınızı yazın...")
+# --- BAŞLIK ---
+st.title("🧩 Amino Asit Avı")
+name = st.text_input("Yarışmacı Adı:", placeholder="İsminizi girin...")
 
-if not user_name:
-    st.info("👆 Lütfen önce adınızı yazın.")
+if not name:
+    st.warning("Lütfen başlamak için isminizi yazın.")
     st.stop()
 
 # --- OYUN MANTIĞI ---
-def check_word():
-    # Seçilen koordinatlardaki harfleri birleştir
-    current_word = "".join([st.session_state.grid[r][c] for r, c in st.session_state.selected_coords])
-    if current_word in target_words and current_word not in st.session_state.found_words:
-        st.session_state.found_words.append(current_word)
-        st.session_state.found_coords.extend(st.session_state.selected_coords)
-        st.session_state.selected_coords = []
+def check_selection():
+    # Seçili koordinatlardaki harfleri birleştir
+    current_str = "".join([st.session_state.grid[r][c] for r, c in st.session_state.selected])
+    if current_str in words and current_str not in st.session_state.found_words:
+        st.session_state.found_words.append(current_str)
+        for coord in st.session_state.selected:
+            st.session_state.found_coords.add(coord)
+        st.session_state.selected = []
         return True
     return False
 
-# --- BULMACA EKRANI (HTML & Streamlit Karma) ---
-st.write(f"Bulunan: {len(st.session_state.found_words)} / 9")
+# --- EKRAN ---
+st.write(f"Bulunan: **{len(st.session_state.found_words)} / 9**")
 
-# Izgarayı oluştur
-for r in range(12):
-    cols = st.columns(10) # Telefondaki "alt alta binme" sorununu önlemek için columns sayısını sabitliyoruz
-    for c in range(10):
-        char = st.session_state.grid[r][c]
+for r in range(GRID_SIZE):
+    cols = st.columns(GRID_SIZE)
+    for c in range(GRID_SIZE):
         coord = (r, c)
+        char = st.session_state.grid[r][c]
         
-        # Renk Belirleme
+        # Renk ve Tip Belirleme
         if coord in st.session_state.found_coords:
-            btn_type = "primary" # Yeşilimsi/Mavi (Tema ayarına göre)
-            label = f"✅" # Veya sadece char
-        elif coord in st.session_state.selected_coords:
-            label = char
-            btn_type = "secondary" # Gri görünüm için standart buton
+            btn_type = "primary" # Yeşil (Found)
+            btn_label = char
+        elif coord in st.session_state.selected:
+            btn_type = "secondary" # Gri (Selected)
+            btn_label = f"🔘" # Görsel geri bildirim için simge veya harf
         else:
-            label = char
             btn_type = "secondary"
+            btn_label = char
 
-        if cols[c].button(label, key=f"btn_{r}_{c}", use_container_width=True, type="primary" if coord in st.session_state.found_coords else "secondary"):
+        if cols[c].button(btn_label, key=f"{r}_{c}", type=btn_type):
             if coord not in st.session_state.found_coords:
-                if coord in st.session_state.selected_coords:
-                    st.session_state.selected_coords.remove(coord)
+                if coord in st.session_state.selected:
+                    st.session_state.selected.remove(coord) # Tekrar basınca kaldır
                 else:
-                    st.session_state.selected_coords.append(coord)
-                check_word()
+                    st.session_state.selected.append(coord)
+                check_selection()
                 st.rerun()
 
-if st.button("Seçimi Sıfırla 🧹", use_container_width=True):
-    st.session_state.selected_cells = []
-    st.session_state.selected_coords = []
+if st.button("Seçimi Temizle 🗑️", use_container_width=True):
+    st.session_state.selected = []
     st.rerun()
 
 # --- BİTİŞ ---
 if len(st.session_state.found_words) == 9:
-    total_time = round(time.time() - st.session_state.start_time, 2)
+    final_time = round(time.time() - st.session_state.start_time, 2)
     st.balloons()
-    st.success(f"MÜKEMMEL! {user_name}, süren: {total_time} saniye.")
-    st.divider()
-    st.subheader("Öğretmene bu ekranı göster!")
-    st.write(f"Kod: {user_name.upper()}-{int(total_time*100)}")
+    st.success(f"Tebrikler {name}! Hızın: {final_time} sn")
+    st.subheader("Skor Tablosu İçin Bildir:")
+    st.code(f"{name} | {final_time}s | {time.strftime('%H:%M')}")
 
-st.sidebar.markdown("### Bulunacak Liste")
-for w in target_words:
-    status = "✅" if w in st.session_state.found_words else "⬜"
-    st.sidebar.write(f"{status} {w}")
+st.sidebar.markdown("### Amino Asit Listesi")
+for w in words:
+    st.sidebar.write(f"{'✅' if w in st.session_state.found_words else '⬜'} {w}")
